@@ -4,14 +4,14 @@ export interface IOffer extends Document {
   title: string;
   description: string;
   price: number;
-  imageId?: string; // optional, offer may exist without an image
+  imageId?: string;
 }
 
-const OfferSchema = new Schema<IOffer>({
+const OfferSchema = new Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
   price: { type: Number, required: true },
-  imageId: { type: String, required: false },
+  imageId: { type: String },
 });
 
-export const Offer = model<IOffer>("Offer", OfferSchema, "offers");
+export const Offer = model("Offer", OfferSchema, "offers");

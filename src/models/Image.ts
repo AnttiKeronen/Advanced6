@@ -5,9 +5,9 @@ export interface IImage extends Document {
   path: string;
 }
 
-const ImageSchema = new Schema<IImage>({
+const ImageSchema = new Schema({
   filename: { type: String, required: true },
   path: { type: String, required: true },
 });
 
-export const Image = model<IImage>("Image", ImageSchema, "images");
+export const Image = model("Image", ImageSchema, "images");

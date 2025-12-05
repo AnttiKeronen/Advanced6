@@ -4,6 +4,6 @@ exports.Image = void 0;
 const mongoose_1 = require("mongoose");
 const ImageSchema = new mongoose_1.Schema({
     filename: { type: String, required: true },
-    path: { type: String, required: true }
+    path: { type: String, required: true },
 });
-exports.Image = (0, mongoose_1.model)("Image", ImageSchema);
+exports.Image = (0, mongoose_1.model)("Image", ImageSchema, "images");
