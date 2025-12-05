@@ -4,11 +4,10 @@
     "module": "commonjs",
     "outDir": "./dist",
     "esModuleInterop": true,
+    "allowJs": true,
     "skipLibCheck": true,
-    "noEmit": false,
     "noEmitOnError": false,
-    "strict": false,
-    "allowJs": true
+    "strict": false
   },
   "include": ["src/**/*"]
 }

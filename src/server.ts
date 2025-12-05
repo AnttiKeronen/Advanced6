@@ -1,108 +1,140 @@
 import express from "express";
 import mongoose from "mongoose";
 import path from "path";
-import fs from "fs";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
+import fs from "fs";
+
 import { Offer } from "./models/Offer";
 import { Image } from "./models/Image";
+
 const app = express();
+
+// --- Mongo connection ---
+const MONGO_URI = "mongodb://127.0.0.1:27017/testdb";
+
 mongoose
-  .connect("mongodb://127.0.0.1:27017/testdb")
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.error("MongoDB connection error:", err));
-app.use(express.json());
+  .connect(MONGO_URI)
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("Mongo connection error:", err));
+
+// --- Middlewares ---
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
+// Serve static files from public
 app.use(express.static(path.join(__dirname, "..", "public")));
+
+// Ensure images folder exists
 const imagesDir = path.join(__dirname, "..", "public", "images");
 if (!fs.existsSync(imagesDir)) {
   fs.mkdirSync(imagesDir, { recursive: true });
 }
+
+// --- Multer config ---
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, imagesDir); 
+    cb(null, imagesDir);
   },
   filename: (req, file, cb) => {
     const originalName = file.originalname;
-    const lastDotIndex = originalName.lastIndexOf(".");
-    const ext =
-      lastDotIndex !== -1 ? originalName.substring(lastDotIndex) : "";
-    const baseName =
-      lastDotIndex !== -1 ? originalName.substring(0, lastDotIndex) : originalName;
+    const ext = path.extname(originalName); // .jpg, .png etc
+    const baseName = path.basename(originalName, ext); // without extension
+
     const uniqueId = uuidv4();
-    const newFilename = `${baseName}_${uniqueId}${ext}`;
+    // Optionally sanitize baseName a bit
+    const safeBase = baseName.replace(/\s+/g, "_");
+
+    const newFilename = `${safeBase}_${uniqueId}${ext}`;
     cb(null, newFilename);
-  }
+  },
 });
+
 const upload = multer({ storage });
+
+// --- Routes ---
+
+// POST /upload: create offer, optionally with image
 app.post("/upload", upload.single("image"), async (req, res) => {
   try {
     const { title, description, price } = req.body;
-    let imageId: string | undefined = undefined;
+
+    let imageId: string | undefined;
+
+    // If file exists, save to images collection
     if (req.file) {
       const filename = req.file.filename;
-      const savedPath = `public/images/${filename}`;
-      const imageDoc = await Image.create({
+      const imagePath = `public/images/${filename}`;
+
+      const imageDoc = new Image({
         filename,
-        path: savedPath
+        path: imagePath,
       });
-      imageId = imageDoc._id.toString();
+
+      const savedImage = await imageDoc.save();
+      imageId = savedImage._id.toString();
     }
-    const priceNumber = Number(price);
-    const offer = await Offer.create({
+
+    const offer = new Offer({
       title,
       description,
-      price: priceNumber,
-      imageId
+      price: Number(price),
+      imageId: imageId ? imageId : undefined,
     });
-    res.status(201).json(offer);
+
+    const savedOffer = await offer.save();
+
+    res.json({ success: true, offer: savedOffer });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to upload offer" });
+    res.status(500).json({ success: false, error: "Failed to upload offer" });
   }
 });
+
+// GET /offers: get all offers including their image data
 app.get("/offers", async (req, res) => {
   try {
-    const offers = await Offer.find();
-    const imageIds = offers
-      .map((o) => o.imageId)
-      .filter((id): id is string => !!id);
-    const images = await Image.find({
-      _id: { $in: imageIds }
-    });
+    const offers = await Offer.find().lean();
 
-    const imageMap = new Map<string, any>();
-    images.forEach((img) => {
-      imageMap.set(img._id.toString(), img);
-    });
-    const offersWithImages = offers.map((offer) => {
-      const obj: any = {
-        _id: offer._id,
-        title: offer.title,
-        description: offer.description,
-        price: offer.price
-      };
-      if (offer.imageId) {
-        const img = imageMap.get(offer.imageId);
-        if (img) {
-          obj.image = {
-            _id: img._id,
-            filename: img.filename,
-            path: img.path
-          };
+    // For each offer, find corresponding image by imageId (if exists)
+    const result = await Promise.all(
+      offers.map(async (offer) => {
+        let image = null;
+
+        if (offer.imageId) {
+          image = await Image.findById(offer.imageId).lean();
         }
-      }
 
-      return obj;
-    });
-    res.json(offersWithImages);
+        return {
+          _id: offer._id,
+          title: offer.title,
+          description: offer.description,
+          price: offer.price,
+          image: image
+            ? {
+                _id: image._id,
+                filename: image.filename,
+                path: image.path, // e.g. "public/images/file.png"
+              }
+            : null,
+        };
+      })
+    );
+
+    res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Fail" });
+    res.status(500).json({ error: "Failed to fetch offers" });
   }
 });
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log("Server running on port 3000");
+
+// Serve index.html at root
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "public", "index.html"));
 });
 
+// --- Start server ---
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server listening on http://localhost:${PORT}`);
+});
