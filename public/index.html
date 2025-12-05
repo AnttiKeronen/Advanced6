@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Offers</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="center-align">Sell your items</h1>
+      <form id="offerForm" class="card-panel">
+        <div class="input-field">
+          <label for="title">Title</label>
+          <input id="title" name="title" type="text" required />
+        </div>
+        <div class="input-field">
+          <label for="price">Price</label>
+          <input id="price" name="price" type="number" required />
+        </div>
+        <div class="input-field">
+          <label for="description">Description</label>
+          <textarea
+            id="description"
+            name="description"
+            class="materialize-textarea"
+            required
+          ></textarea>
+        </div>
+        <div class="file-field input-field">
+          <div class="btn">
+            <span>Upload image:</span>
+            <input id="image" name="image" type="file" />
+          </div>
+          <div class="file-path-wrapper">
+            <input
+              class="file-path validate"
+              type="text"
+              placeholder="Optional image"
+            />
+          </div>
+        </div>
+        <button
+          type="submit"
+          class="btn waver-effect waves-light"
+        >
+          Submit
+        </button>
+      </form>
+      <div class="row" id="offersContainer"></div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
