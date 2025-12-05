@@ -6,16 +6,18 @@ import { v4 as uuidv4 } from "uuid";
 import fs from "fs";
 import { Offer } from "./models/Offer";
 import { Image } from "./models/Image";
+
 const app = express();
 const MONGO_URI = "mongodb://127.0.0.1:27017/testdb";
 mongoose
   .connect(MONGO_URI)
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("Mongo connection error:", err));
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "..", "public")));
 
+app.use(express.static(path.join(__dirname, "..", "public")));
 
 const imagesDir = path.join(__dirname, "..", "public", "images");
 if (!fs.existsSync(imagesDir)) {
@@ -28,8 +30,7 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     const originalName = file.originalname;
     const ext = path.extname(originalName);
-    const baseName = path.basename(originalName, ext); 
-
+    const baseName = path.basename(originalName, ext);
     const uniqueId = uuidv4();
     const safeBase = baseName.replace(/\s+/g, "_");
 
@@ -37,12 +38,10 @@ const storage = multer.diskStorage({
     cb(null, newFilename);
   },
 });
-
 const upload = multer({ storage });
 app.post("/upload", upload.single("image"), async (req, res) => {
   try {
     const { title, description, price } = req.body;
-
     let imageId: string | undefined;
     if (req.file) {
       const filename = req.file.filename;
@@ -51,29 +50,31 @@ app.post("/upload", upload.single("image"), async (req, res) => {
         filename,
         path: imagePath,
       });
-
       const savedImage = await imageDoc.save();
       imageId = savedImage._id.toString();
     }
+
     const offer = new Offer({
       title,
       description,
       price: Number(price),
-      imageId: imageId ? imageId : undefined,
+      imageId: imageId || undefined,
     });
+    await offer.save();
+    return res.status(201).json({ success: true });
 
-    const savedOffer = await offer.save();
-
-    res.json({ success: true, offer: savedOffer });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, error: "Failed to upload offer" });
+    return res.status(500).json({ success: false });
   }
 });
 
+
+// Get all offers
 app.get("/offers", async (req, res) => {
   try {
     const offers = await Offer.find().lean();
+
     const result = await Promise.all(
       offers.map(async (offer) => {
         let image = null;
@@ -91,7 +92,7 @@ app.get("/offers", async (req, res) => {
             ? {
                 _id: image._id,
                 filename: image.filename,
-                path: image.path, 
+                path: image.path,
               }
             : null,
         };
@@ -104,6 +105,7 @@ app.get("/offers", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch offers" });
   }
 });
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "public", "index.html"));
 });
