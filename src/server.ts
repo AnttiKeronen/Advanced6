@@ -49,14 +49,14 @@ app.post("/upload", upload.single("image"), async (req, res) => {
 
     if (req.file) {
       const filename = req.file.filename;
-      const pathStr = `public/images/${filename}`;
+      const p = `public/images/${filename}`;
 
-      const imageDoc = new Image({
+      const img = new Image({
         filename,
-        path: pathStr,
+        path: p,
       });
 
-      const saved = await imageDoc.save();
+      const saved = await img.save();
       imageId = saved._id.toString();
     }
 
@@ -117,3 +117,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server listening on http://localhost:${PORT}`);
 });
+
